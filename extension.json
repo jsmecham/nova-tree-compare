@@ -1,0 +1,54 @@
+{
+    "identifier": "Mecham.TreeCompare",
+    "name": "Tree Compare",
+    "author": "Justin Mecham",
+    "description": "Lorem ipsum, dolor sit amet.",
+    "version": "1.0",
+    
+    "main": "main.js",
+    
+    "entitlements": {
+        "process": true
+    },
+    
+    "sidebars": [
+        {
+            "id": "treecompare",
+            "name": "Tree Compare",
+            "imageName": "mysidebar",
+            "sections": [
+                {
+                    "id": "mysidebar",
+                    "name": "Profiles",
+                    "headerCommands": [
+                        {
+                            "title": "Add",
+                            "image": "__builtin.add",
+                            "tooltip": "Add a new profile",
+                            "command": "mysidebar.add"
+                        },
+                        {
+                            "title": "Remove",
+                            "image": "__builtin.remove",
+                            "tooltip": "Remove the selected profiles",
+                            "command": "mysidebar.remove",
+                            "when": "viewItem != null"
+                        }
+                    ],
+                    "contextCommands": [
+                        {
+                            "title": "Remove",
+                            "command": "mysidebar.remove",
+                            "when": "viewItem != null"
+                        },
+                        {
+                            "title": "Show in Finder",
+                            "command": "mysidebar.showInFinder",
+                            "when": "viewItem != null"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
