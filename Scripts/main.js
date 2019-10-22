@@ -5,9 +5,9 @@
 // Copyright © 2019 Justin Mecham. All rights reserved.
 // 
 
-
 var treeView = null;
-
+var dataProvider = null;
+var changedFiles = [];
 
 exports.activate = function() {
     // Do work when the extension is activated
@@ -16,7 +16,37 @@ exports.activate = function() {
     treeView = new TreeView("mysidebar", {
         dataProvider: new FruitDataProvider()
     });
+
+    const process = new Process("/usr/bin/env", {
+        args: ["git", "diff", "-z", "--name-status", "master..."],
+        cwd: nova.workspace.path
+    });
     
+    process.onStdout(function(output) {
+        console.log("processResult", output);
+        const rootItems = [];
+        
+        output.match(/([A-Z]{1})\0([^\0]+\0)/g).forEach((match) => {
+            const file = match.split("\0");
+            const mode = file[0];
+            const path = file[1];
+            console.log(mode, path);
+            rootItems.push([mode, path]);
+        })
+
+        changedFiles = rootItems;
+        treeView = new TreeView("mysidebar", {
+            dataProvider: new FruitDataProvider()
+        });
+    });
+    process.onStderr(function(line) {
+        // TODO: Display an alert if not a git repository
+        console.log("Error! ", line);
+    });
+    
+    process.start();
+
+
     treeView.onDidChangeSelection((selection) => {
         // console.log("New selection: " + selection.map((e) => e.name));
     });
@@ -39,12 +69,13 @@ exports.activate = function() {
 
 exports.deactivate = function() {
     // Clean up state before the extension is deactivated
+    treeView = null;
 }
 
-
-nova.commands.register("mysidebar.add", () => {
+nova.commands.register("mysidebar.refresh", () => {
     // Invoked when the "add" header button is clicked
     console.log("Add");
+    return treeView.reload(null);
 });
 
 nova.commands.register("mysidebar.remove", () => {
@@ -56,13 +87,22 @@ nova.commands.register("mysidebar.remove", () => {
 nova.commands.register("mysidebar.doubleClick", () => {
     // Invoked when an item is double-clicked
     let selection = treeView.selection;
-    console.log("DoubleClick: " + selection.map((e) => e.name));
+    console.log("DoubleClick:", JSON.stringify(selection));
+    
+    const openFilePromises = [];
+    selection.map((element) => {
+        const uri = encodeURI("file://" + element.path);
+        openFilePromises.push(nova.workspace.openFile(uri));
+    });
+
+    return Promise.all(openFilePromises).then(() => { return null; });
 });
 
 
 class FruitItem {
     constructor(name) {
         this.name = name;
+        this.path = `${nova.workspace.path}/${name}`;
         this.children = [];
         this.parent = null;
     }
@@ -73,54 +113,21 @@ class FruitItem {
     }
 }
 
-
 class FruitDataProvider {
+    
     constructor() {
-        let rootItems = [];
-    
-        const options = {
-            args: ["git", "diff", "-z", "--name-status", "master..."],
-            cwd: nova.workspace.path
-        };
-        const process = new Process("/usr/bin/env", options);
+        this.rootItems = [];
 
-        process.onStdout(this.processResult.bind(this));
-
-        process.onStderr(function(line) {
-            // TODO: Display an alert if not a git repository
-            // Tree Compare[9:28:49.601000] Error!  Not a git repository
-            console.log("Error! ", line);
+        changedFiles.forEach((file) => {
+            console.log("Flag: ", file[0], "Path:", file[1]);
+            let element = new FruitItem(file[1]);
+            this.rootItems.push(element);
         });
-
-        process.start();
-        
-
-    
-    
-    
-    
-    
-        let fruits = ["Apple", "Banana", "Cherry", "Date", "Fig", "Grapefruit", "Kiwi", "Lemon", "Mango", "Nectarine", "Orange", "Pear", "Raspberry", "Strawberry", "Tangerine", "Watermellon"];
-        
-        fruits.forEach((f) => {
-            let element = new FruitItem(f);
-            
-            for (let i = 0; i < 3; i++) {
-                element.addChild(new FruitItem("Test " + (i + 1)));
-            }
-            
-            rootItems.push(element);
-        });
-        
-        this.rootItems = rootItems;
     }
-    
-    processResult(output) {
-        console.log("output:", output);
-    }
-    
+        
     getChildren(element) {
         // Requests the children of an element
+        console.log("getChildren", element);
         if (!element) {
             return this.rootItems;
         }
@@ -137,16 +144,18 @@ class FruitDataProvider {
     getTreeItem(element) {
         // Converts an element into its display (TreeItem) representation
         let item = new TreeItem(element.name);
-        if (element.children.length > 0) {
-            item.collapsibleState = TreeItemCollapsibleState.Collapsed;
-            item.image = "__filetype.png";
-            item.contextValue = "fruit";
-        }
-        else {
-            item.image = "__filetype.txt";
+        // if (element.children.length > 0) {
+        //     item.collapsibleState = TreeItemCollapsibleState.Collapsed;
+        //     item.path = element.name;
+        //     // item.image = "__filetype.png";
+        //     item.contextValue = "fruit";
+        // }
+        // else {
+            // item.image = "__filetype.txt";
+            item.path = element.path;
             item.command = "mysidebar.doubleClick";
             item.contextValue = "info";
-        }
+        // }
         return item;
     }
 }

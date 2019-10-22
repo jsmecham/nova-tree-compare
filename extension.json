@@ -19,13 +19,13 @@
             "sections": [
                 {
                     "id": "mysidebar",
-                    "name": "Profiles",
+                    "name": "Branch Changes",
                     "headerCommands": [
                         {
-                            "title": "Add",
-                            "image": "__builtin.add",
-                            "tooltip": "Add a new profile",
-                            "command": "mysidebar.add"
+                            "title": "Refresh",
+                            "image": "__builtin.refresh",
+                            "tooltip": "Refresh working copy",
+                            "command": "mysidebar.refresh"
                         },
                         {
                             "title": "Remove",
