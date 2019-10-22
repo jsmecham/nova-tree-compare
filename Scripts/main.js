@@ -17,35 +17,37 @@ exports.activate = function() {
         dataProvider: new FruitDataProvider()
     });
 
+    // TODO: Extract this into its own class
     const process = new Process("/usr/bin/env", {
+        // TODO: Make branch name configurable
         args: ["git", "diff", "-z", "--name-status", "master..."],
         cwd: nova.workspace.path
     });
-    
+
     process.onStdout(function(output) {
-        console.log("processResult", output);
-        const rootItems = [];
-        
-        output.match(/([A-Z]{1})\0([^\0]+\0)/g).forEach((match) => {
+        const files = output.match(/([A-Z]{1})\0([^\0]+\0)/g).map((match) => {
             const file = match.split("\0");
             const mode = file[0];
             const path = file[1];
-            console.log(mode, path);
-            rootItems.push([mode, path]);
+
+            return [mode, path];
         })
 
-        changedFiles = rootItems;
+        changedFiles = files;
+
+        // QUESTION: Currently (re)creating the tree view once the files have loaded. Should
+        // I be able to simply reload the data provider?
         treeView = new TreeView("mysidebar", {
             dataProvider: new FruitDataProvider()
         });
     });
+    
     process.onStderr(function(line) {
         // TODO: Display an alert if not a git repository
         console.log("Error! ", line);
     });
     
     process.start();
-
 
     treeView.onDidChangeSelection((selection) => {
         // console.log("New selection: " + selection.map((e) => e.name));
@@ -69,12 +71,12 @@ exports.activate = function() {
 
 exports.deactivate = function() {
     // Clean up state before the extension is deactivated
-    treeView = null;
 }
 
 nova.commands.register("mysidebar.refresh", () => {
     // Invoked when the "add" header button is clicked
     console.log("Add");
+    // TODO: This doesn't seem to do anything...
     return treeView.reload(null);
 });
 
@@ -95,6 +97,8 @@ nova.commands.register("mysidebar.doubleClick", () => {
         openFilePromises.push(nova.workspace.openFile(uri));
     });
 
+    // NOTE: Should be documented in Nova that you need to return a promise here
+    // for async operations, and the promise can't return an object.
     return Promise.all(openFilePromises).then(() => { return null; });
 });
 
