@@ -4,46 +4,43 @@
     "author": "Justin Mecham",
     "description": "Lorem ipsum, dolor sit amet.",
     "version": "1.0",
-    
     "main": "main.js",
-    
     "entitlements": {
         "process": true
     },
-    
     "sidebars": [
         {
-            "id": "treecompare",
+            "id": "treeCompare",
             "name": "Tree Compare",
-            "imageName": "mysidebar",
+            "imageName": "treecompare",
             "sections": [
                 {
-                    "id": "mysidebar",
+                    "id": "treeCompare",
                     "name": "Branch Changes",
                     "headerCommands": [
+                        {
+                            "title": "Target Branch",
+                            "image": "__builtin.branch",
+                            "tooltip": "Change target branch for compare",
+                            "command": "treeCompare.changeBranch",
+                            "when": "false"
+                        },
                         {
                             "title": "Refresh",
                             "image": "__builtin.refresh",
                             "tooltip": "Refresh working copy",
-                            "command": "mysidebar.refresh"
-                        },
-                        {
-                            "title": "Remove",
-                            "image": "__builtin.remove",
-                            "tooltip": "Remove the selected profiles",
-                            "command": "mysidebar.remove",
-                            "when": "viewItem != null"
+                            "command": "treeCompare.refresh"
                         }
                     ],
                     "contextCommands": [
                         {
                             "title": "Remove",
-                            "command": "mysidebar.remove",
+                            "command": "treeCompare.remove",
                             "when": "viewItem != null"
                         },
                         {
                             "title": "Show in Finder",
-                            "command": "mysidebar.showInFinder",
+                            "command": "treeCompare.showInFinder",
                             "when": "viewItem != null"
                         }
                     ]

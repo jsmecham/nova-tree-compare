@@ -1,97 +1,51 @@
-// 
+//
+// Tree Compare for Nova
 // main.js
 //
-// Created by Justin Mecham on 10/21/19.
 // Copyright © 2019 Justin Mecham. All rights reserved.
-// 
+//
 
-var treeView = null;
-var dataProvider = null;
-var changedFiles = [];
+const GitBranchDataProvider = require("GitBranchDataProvider");
+const GitDiffProcess = require("GitDiffProcess");
+var treeView;
 
 exports.activate = function() {
-    // Do work when the extension is activated
-    
-    // Create the TreeView
-    treeView = new TreeView("mysidebar", {
-        dataProvider: new FruitDataProvider()
-    });
 
-    // TODO: Extract this into its own class
-    const process = new Process("/usr/bin/env", {
-        // TODO: Make branch name configurable
-        args: ["git", "diff", "-z", "--name-status", "master..."],
-        cwd: nova.workspace.path
-    });
+    // TreeView Data Provider
+    const dataProvider = new GitBranchDataProvider();
 
-    process.onStdout(function(output) {
-        const files = output.match(/([A-Z]{1})\0([^\0]+\0)/g).map((match) => {
-            const file = match.split("\0");
-            const mode = file[0];
-            const path = file[1];
-
-            return [mode, path];
-        })
-
-        changedFiles = files;
-
-        // QUESTION: Currently (re)creating the tree view once the files have loaded. Should
-        // I be able to simply reload the data provider?
-        treeView = new TreeView("mysidebar", {
-            dataProvider: new FruitDataProvider()
-        });
-    });
-    
-    process.onStderr(function(line) {
-        // TODO: Display an alert if not a git repository
-        console.log("Error! ", line);
-    });
-    
-    process.start();
-
-    treeView.onDidChangeSelection((selection) => {
-        // console.log("New selection: " + selection.map((e) => e.name));
-    });
-    
-    treeView.onDidExpandElement((element) => {
-        // console.log("Expanded: " + element.name);
-    });
-    
-    treeView.onDidCollapseElement((element) => {
-        // console.log("Collapsed: " + element.name);
-    });
-    
-    treeView.onDidChangeVisibility(() => {
-        // console.log("Visibility Changed");
-    });
-    
-    // TreeView implements the Disposable interface
+    // TreeView
+    // QUESTION: Wrap this in GitBranchTreeView?
+    treeView = new TreeView("treeCompare", { dataProvider });
     nova.subscriptions.add(treeView);
+
+    // Git "diff" Process Wrapper
+    const diffProcess = new GitDiffProcess();
+    diffProcess.onComplete((files) => {
+        dataProvider.files = files;
+        treeView.reload();
+    });
+    diffProcess.execute();
+    nova.subscriptions.add(diffProcess);
+
+    // File System Watcher
+    const watcher = nova.fs.watch(null, diffProcess.execute);
+    nova.subscriptions.add(watcher);
+
 }
 
 exports.deactivate = function() {
     // Clean up state before the extension is deactivated
 }
 
-nova.commands.register("mysidebar.refresh", () => {
-    // Invoked when the "add" header button is clicked
-    console.log("Add");
-    // TODO: This doesn't seem to do anything...
-    return treeView.reload(null);
+nova.commands.register("treeCompare.refresh", () => {
+    return treeView.reload();
 });
 
-nova.commands.register("mysidebar.remove", () => {
-    // Invoked when the "remove" header button is clicked
-    let selection = treeView.selection;
-    console.log("Remove: " + selection.map((e) => e.name));
-});
-
-nova.commands.register("mysidebar.doubleClick", () => {
-    // Invoked when an item is double-clicked
-    let selection = treeView.selection;
-    console.log("DoubleClick:", JSON.stringify(selection));
-    
+nova.commands.register("treeCompare.doubleClick", () => {
+    const selection = treeView.selection;
     const openFilePromises = [];
+
     selection.map((element) => {
         const uri = encodeURI("file://" + element.path);
         openFilePromises.push(nova.workspace.openFile(uri));
@@ -99,68 +53,5 @@ nova.commands.register("mysidebar.doubleClick", () => {
 
     // NOTE: Should be documented in Nova that you need to return a promise here
     // for async operations, and the promise can't return an object.
-    return Promise.all(openFilePromises).then(() => { return null; });
+    return Promise.all(openFilePromises).then(() => null);
 });
-
-
-class FruitItem {
-    constructor(name) {
-        this.name = name;
-        this.path = `${nova.workspace.path}/${name}`;
-        this.children = [];
-        this.parent = null;
-    }
-    
-    addChild(element) {
-        element.parent = this;
-        this.children.push(element);
-    }
-}
-
-class FruitDataProvider {
-    
-    constructor() {
-        this.rootItems = [];
-
-        changedFiles.forEach((file) => {
-            console.log("Flag: ", file[0], "Path:", file[1]);
-            let element = new FruitItem(file[1]);
-            this.rootItems.push(element);
-        });
-    }
-        
-    getChildren(element) {
-        // Requests the children of an element
-        console.log("getChildren", element);
-        if (!element) {
-            return this.rootItems;
-        }
-        else {
-            return element.children;
-        }
-    }
-    
-    getParent(element) {
-        // Requests the parent of an element, for use with the reveal() method
-        return element.parent;
-    }
-    
-    getTreeItem(element) {
-        // Converts an element into its display (TreeItem) representation
-        let item = new TreeItem(element.name);
-        // if (element.children.length > 0) {
-        //     item.collapsibleState = TreeItemCollapsibleState.Collapsed;
-        //     item.path = element.name;
-        //     // item.image = "__filetype.png";
-        //     item.contextValue = "fruit";
-        // }
-        // else {
-            // item.image = "__filetype.txt";
-            item.path = element.path;
-            item.command = "mysidebar.doubleClick";
-            item.contextValue = "info";
-        // }
-        return item;
-    }
-}
-
