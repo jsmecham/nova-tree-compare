@@ -17,6 +17,7 @@
                 {
                     "id": "treeCompare",
                     "name": "Branch Changes",
+                    "placeholderText": "No changes",
                     "headerCommands": [
                         {
                             "title": "Target Branch",
