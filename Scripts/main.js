@@ -29,7 +29,7 @@ exports.activate = function() {
     nova.subscriptions.add(diffProcess);
 
     // File System Watcher
-    const watcher = nova.fs.watch(null, diffProcess.execute);
+    const watcher = nova.fs.watch(null, diffProcess.execute.bind(diffProcess));
     nova.subscriptions.add(watcher);
 
 }
