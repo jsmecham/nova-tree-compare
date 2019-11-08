@@ -7,6 +7,10 @@
 
 class GitDiffProcess {
 
+    constructor() {
+        this.isExecuting = false;
+    }
+
     get process() {
         if (this._process) { return this._process }
 
@@ -23,6 +27,9 @@ class GitDiffProcess {
     }
 
     execute() {
+        if (this.isExecuting) return;
+
+        this.isExecuting = true;
         this.process.start();
 
         const channel = this.process.stdin;
@@ -31,6 +38,8 @@ class GitDiffProcess {
         writer.ready.then(() => {
             writer.write(this.content);
             writer.close();
+        }).then(() => {
+            this.isExecuting = false;
         });
     }
 
